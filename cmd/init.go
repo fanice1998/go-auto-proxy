@@ -20,7 +20,6 @@ var initCmd = &cobra.Command{
     Use:   "init",
     Short: "Initialize go-auto-proxy and install dependencies",
     Run: func(cmd *cobra.Command, args []string) {
-        // 初始化日誌
         logFile, err := os.OpenFile("go-auto-proxy.log", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
         if err != nil {
             fmt.Printf("Failed to open log file: %v\n", err)
@@ -34,45 +33,41 @@ var initCmd = &cobra.Command{
 
         log.Println("Initializing go-auto-proxy...")
 
-        // 檢查當前目錄權限
         if err := checkDirPermissions(); err != nil {
             log.Println(err)
             return
         }
 
-        // 檢測當前用戶與 sudo 權限
         if err := checkUserAndSudo(); err != nil {
             log.Println(err)
             return
         }
 
-        // 收集系統資訊
         sysInfo := system.GetSystemInfo()
         log.Printf("System Info: %+v", sysInfo)
+        log.Printf("ZeroTier Network ID: %s (update config.json to join a network)", sysInfo.ZeroTier.NetworkID)
+        log.Printf("acme.sh Path: %s, Provider: %s", sysInfo.AcmeSH.Path, sysInfo.AcmeSH.Provider)
+        log.Printf("trojan-go Port: %d, Password: %s", sysInfo.TrojanGo.Port, sysInfo.TrojanGo.Password)
+        log.Printf("fail2ban Monitored Items: %v", sysInfo.Fail2Ban.MonitoredItems)
 
-        // 檢查並處理 trojan-go 目錄
         if err := handleTrojanGoDir(); err != nil {
             log.Println(err)
             return
         }
 
-        // 寫入 config.json
         err = config.WriteConfig(sysInfo)
         if err != nil {
             log.Println("Error writing config:", err)
             return
         }
 
-        // 安裝依賴
         if err := installer.InstallDependencies(); err != nil {
             log.Println("Error installing dependencies:", err)
             return
         }
 
-        // 測試已安裝的工具
         if err := testInstalledTools(); err != nil {
             log.Println("Some tools failed verification:", err)
-            // 不中止程式，僅記錄警告
         }
 
         log.Println("Initialization completed.")
